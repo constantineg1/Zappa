@@ -11,6 +11,7 @@ import random
 import requests
 import shutil
 import string
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -178,6 +179,8 @@ LAMBDA_REGIONS = ['us-east-1', 'us-west-2', 'eu-west-1', 'ap-northeast-1']
 
 ZIP_EXCLUDES =  ['*.exe', '*.DS_Store', '*.Python', '*.git', '*.zip', '*.tar.gz','*.hg']
 
+STANDARD_CONDA_PACKAGES = ['openssl','pip','python','readline','sqlite','wheel', 'boto3', 'botocore']
+
 ##
 # Classes
 ##
@@ -236,7 +239,7 @@ class Zappa(object):
     ##
 
     def create_lambda_zip(self, prefix='lambda_package', handler_file=None,
-                          minify=True, exclude=None, use_precompiled_packages=True, include=None, venv=None):
+                          minify=True, exclude=None, use_precompiled_packages=True, include=None, venv=None, exclude_conda_packages=STANDARD_CONDA_PACKAGES):
         """
         Creates a Lambda-ready zip file of the current virtualenvironment and working directory.
 
@@ -307,15 +310,38 @@ class Zappa(object):
         # Then, do the site-packages..
         # TODO Windows: %VIRTUAL_ENV%\Lib\site-packages
         temp_package_path = os.path.join(temp_zappa_folder, 'package')
-        site_packages = os.path.join(venv, 'lib', 'python2.7', 'site-packages')
+        if not USE_CONDA:
+            site_packages = os.path.join(venv, 'lib', 'python2.7', 'site-packages')
 
-        if minify:
-            excludes = ZIP_EXCLUDES + exclude
-            shutil.copytree(site_packages, temp_package_path, symlinks=False, ignore=shutil.ignore_patterns(*excludes))
+            if minify:
+                excludes = ZIP_EXCLUDES + exclude
+                shutil.copytree(site_packages, temp_package_path, symlinks=False, ignore=shutil.ignore_patterns(*excludes))
+            else:
+                shutil.copytree(site_packages, temp_package_path, symlinks=False)
+
+            copy_tree(temp_package_path, temp_project_path, update=True)
         else:
-            shutil.copytree(site_packages, temp_package_path, symlinks=False)
+            temp_package_path = os.path.join(temp_zappa_folder,'conda_env')
+            site_packages = os.path.join(temp_package_path, 'lib', 'python2.7', 'site-packages')
+            if minify:
+                excludes = ZIP_EXCLUDES + exclude
+                shutil.copytree(conda_env, temp_package_path, symlinks=True, ignore=shutil.ignore_patterns(*excludes))
+                # Use conda cli to remove standard packages like python, pip, ...
+                subprocess.call(['conda','remove','-p',temp_package_path,'--force','--yes']+exclude_conda_packages)
+            else:
+                shutil.copytree(conda_env, temp_package_path, symlinks=True)
 
-        copy_tree(temp_package_path, temp_project_path, update=True)
+            # Extracts all egg files (e.g. setuptools)
+            egg_files = [f for f in os.listdir(site_packages) if os.path.isfile(os.path.join(site_packages, f)) and f.split('.')[-1]=='egg']
+            for egg_file in egg_files:
+                print('Extracting '+ egg_file)
+                with zipfile.ZipFile(os.path.join(site_packages,egg_file)) as zf:
+                    zf.extractall(os.path.join(site_packages))
+                os.remove(os.path.join(site_packages,egg_file))
+            # Put site-packages at the root of the environment
+            copy_tree(site_packages, temp_package_path, update=True)
+            shutil.rmtree(site_packages)
+            copy_tree(temp_package_path, temp_project_path, update=True)
 
         # Then the pre-compiled packages..
         if use_precompiled_packages:
