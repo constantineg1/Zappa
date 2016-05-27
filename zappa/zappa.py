@@ -179,8 +179,6 @@ LAMBDA_REGIONS = ['us-east-1', 'us-west-2', 'eu-west-1', 'ap-northeast-1']
 
 ZIP_EXCLUDES =  ['*.exe', '*.DS_Store', '*.Python', '*.git', '*.zip', '*.tar.gz','*.hg']
 
-STANDARD_CONDA_PACKAGES = ['openssl','pip','python','readline','sqlite','wheel', 'boto3', 'botocore']
-
 ##
 # Classes
 ##
@@ -239,7 +237,8 @@ class Zappa(object):
     ##
 
     def create_lambda_zip(self, prefix='lambda_package', handler_file=None,
-                          minify=True, exclude=None, use_precompiled_packages=True, include=None, venv=None, exclude_conda_packages=STANDARD_CONDA_PACKAGES):
+                          minify=True, exclude=None, use_precompiled_packages=True, include=None, venv=None, 
+                          exclude_conda_packages=[]):
         """
         Creates a Lambda-ready zip file of the current virtualenvironment and working directory.
 
@@ -327,7 +326,8 @@ class Zappa(object):
                 excludes = ZIP_EXCLUDES + exclude
                 shutil.copytree(conda_env, temp_package_path, symlinks=True, ignore=shutil.ignore_patterns(*excludes))
                 # Use conda cli to remove standard packages like python, pip, ...
-                subprocess.call(['conda','remove','-p',temp_package_path,'--force','--yes']+exclude_conda_packages)
+                if len(exclude_conda_packages):
+                    subprocess.call(['conda','remove','-p',temp_package_path,'--force','--yes']+exclude_conda_packages)
             else:
                 shutil.copytree(conda_env, temp_package_path, symlinks=True)
 

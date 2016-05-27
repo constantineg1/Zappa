@@ -156,6 +156,7 @@ to change Zappa's behavior. Use these at your own risk!
         }],
         "domain": "yourapp.yourdomain.com", // Required if you're using a domain
         "exclude": ["*.gz", "*.pem"], // A list of regex patterns to exclude from the archive
+        "exclude_conda_packages": ["boto3","botocore","pip","python","readline","sqlite","wheel"] // When using conda, a list of conda packages to remove before zipping.
         "http_methods": ["GET", "POST"], // HTTP Methods to route,
         "integration_response_codes": [200, 301, 404, 500], // Integration response status codes to route
         "keep_warm": true, // Create CloudWatch events to keep the server warm.
@@ -172,7 +173,7 @@ to change Zappa's behavior. Use these at your own risk!
         "vpc_config": { // Optional VPC configuration for Lambda function
             "SubnetIds": [ "subnet-12345678" ], // Note: not all availability zones support Lambda!
             "SecurityGroupIds": [ "sg-12345678" ]
-        }
+        },
     }
 }
 ```
