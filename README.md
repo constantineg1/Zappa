@@ -335,6 +335,7 @@ to change Zappa's behavior. Use these at your own risk!
         ],
         "exception_handler": "your_module.report_exception", // function that will be invoked in case Zappa sees an unhandled exception raised from your code
         "exclude": ["*.gz", "*.rar"], // A list of regex patterns to exclude from the archive
+        "exclude_conda_packages": ["boto3","botocore","pip","python","readline","sqlite","wheel"] // When using conda, a list of conda packages to remove before zipping.
         "http_methods": ["GET", "POST"], // HTTP Methods to route,
         "integration_response_codes": [200, 301, 404, 500], // Integration response status codes to route
         "integration_content_type_aliases": { // For routing requests with non-standard mime types
@@ -375,7 +376,7 @@ to change Zappa's behavior. Use these at your own risk!
         "vpc_config": { // Optional VPC configuration for Lambda function
             "SubnetIds": [ "subnet-12345678" ], // Note: not all availability zones support Lambda!
             "SecurityGroupIds": [ "sg-12345678" ]
-        }
+        },
     }
 }
 ```
